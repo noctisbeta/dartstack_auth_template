@@ -1,0 +1,36 @@
+# Docker-related files
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Dart/Flutter specific
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Git files
+.git/
+.github/
+.gitignore
+
+# Environment variables and secrets
+.env
+*.env
+secrets/
+
+# Logs
+*.log
+logs/
+
+# Documentation
+README.md
+CHANGELOG.md
+doc/
