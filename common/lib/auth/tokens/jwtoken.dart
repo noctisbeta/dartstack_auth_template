@@ -20,6 +20,15 @@ extension type JWToken._(String value) {
     return payload['user_id'] as int;
   }
 
+  DateTime getExpiration() {
+    final Map<String, dynamic> payload = _decodePayload();
+    if (!payload.containsKey('exp')) {
+      throw Exception('Invalid JWT: Missing "exp" claim');
+    }
+    final int expiryTimestamp = payload['exp'];
+    return DateTime.fromMillisecondsSinceEpoch(expiryTimestamp * 1000);
+  }
+
   bool isExpired() {
     final Map<String, dynamic> payload = _decodePayload();
     if (!payload.containsKey('exp')) {

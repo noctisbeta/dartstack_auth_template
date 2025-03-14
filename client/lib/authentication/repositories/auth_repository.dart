@@ -62,7 +62,7 @@ final class AuthRepository {
     );
   }
 
-  Future<JWToken?> _refreshJWToken() async {
+  Future<JWToken?> refreshJWToken() async {
     final String? refreshTokenString = await _storage.read(
       key: 'refresh_token',
     );
@@ -170,7 +170,7 @@ final class AuthRepository {
 
     switch (isValid) {
       case false:
-        final JWToken? newJwToken = await _refreshJWToken();
+        final JWToken? newJwToken = await refreshJWToken();
         return newJwToken != null;
       case true:
         return true;
@@ -257,6 +257,30 @@ final class AuthRepository {
             error: RegisterError.unknownRegisterError,
           );
       }
+    }
+  }
+
+  Future<({DateTime jwtExpiresAt, DateTime refreshExpiresAt})?>
+  getTokenExpirations() async {
+    try {
+      final String? jwtString = await _storage.read(key: 'jw_token');
+      final String? refreshExp = await _storage.read(
+        key: 'refresh_token_expires_at',
+      );
+
+      if (jwtString == null || refreshExp == null) {
+        return null;
+      }
+
+      final JWToken jwt = JWToken.fromJwtString(jwtString);
+
+      final DateTime jwtExpiresAt = jwt.getExpiration();
+      final DateTime refreshExpiresAt = DateTime.parse(refreshExp);
+
+      return (jwtExpiresAt: jwtExpiresAt, refreshExpiresAt: refreshExpiresAt);
+    } on Exception catch (e) {
+      LOG.e('Error getting token info: $e');
+      return null;
     }
   }
 }

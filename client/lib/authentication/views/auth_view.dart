@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:client/authentication/controllers/auth_bloc.dart';
 import 'package:client/authentication/models/auth_event.dart';
 import 'package:client/authentication/models/auth_state.dart';
-import 'package:client/authentication/views/home_view.dart';
+import 'package:client/dashboard/views/dashboard_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -31,7 +31,7 @@ class _AuthViewState extends State<AuthView> {
         if (state is AuthStateAuthenticated) {
           unawaited(
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const HomeView()),
+              MaterialPageRoute(builder: (_) => const DashboardView()),
             ),
           );
         } else if (state is AuthStateError) {
@@ -40,45 +40,45 @@ class _AuthViewState extends State<AuthView> {
           ).showSnackBar(SnackBar(content: Text(state.message)));
         }
       },
-      builder: (context, state) {
-        if (state is AuthStateLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        return Center(
-          child: Card(
-            elevation: 8,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Container(
-              width: 400,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _isLogin ? 'Sign in' : 'Create Account',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 24),
-                  if (_isLogin) const LoginForm() else const RegisterForm(),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: _toggleAuthMode,
-                    child: Text(
-                      _isLogin
-                          ? 'Need an account? Register'
-                          : 'Already have an account? Login',
+      builder:
+          (context, state) => Center(
+            child: Card(
+              elevation: 8,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: 400,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _isLogin ? 'Sign in' : 'Create Account',
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    if (_isLogin) const LoginForm() else const RegisterForm(),
+                    const SizedBox(height: 16),
+                    switch (state) {
+                      AuthStateLoading() => const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                      _ => TextButton(
+                        onPressed: _toggleAuthMode,
+                        child: Text(
+                          _isLogin
+                              ? 'Need an account? Register'
+                              : 'Already have an account? Login',
+                        ),
+                      ),
+                    },
+                  ],
+                ),
               ),
             ),
           ),
-        );
-      },
     ),
   );
 }
@@ -126,6 +126,7 @@ class _LoginFormState extends State<LoginForm> {
             border: OutlineInputBorder(),
             prefixIcon: Icon(Icons.person),
           ),
+          textInputAction: TextInputAction.next,
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter your username';
@@ -142,6 +143,8 @@ class _LoginFormState extends State<LoginForm> {
             prefixIcon: Icon(Icons.lock),
           ),
           obscureText: true,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _login(),
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter your password';
