@@ -33,6 +33,17 @@ final class AuthStateLoading extends AuthState {
   List<Object?> get props => [];
 }
 
+// Add this new state for session expiry
+@immutable
+final class AuthStateSessionExpired extends AuthState {
+  const AuthStateSessionExpired({required this.message});
+
+  final String message;
+
+  @override
+  List<Object?> get props => [message];
+}
+
 @immutable
 sealed class AuthStateError extends AuthState {
   const AuthStateError({required this.message});

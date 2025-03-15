@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:client/authentication/models/auth_event.dart';
 import 'package:client/authentication/models/auth_state.dart';
 import 'package:client/authentication/repositories/auth_repository.dart';
@@ -21,11 +23,97 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         AuthEventRegister() => await register(event, emit),
         AuthEventLogout() => await logout(event, emit),
         AuthEventCheckAuth() => await checkAuth(event, emit),
+        AuthEventTokenExpired() => await handleTokenExpired(
+          event,
+          emit,
+        ), // Add this handler
       },
     );
+
+    // Start monitoring token expiration when bloc is created
+    _startTokenExpirationMonitor();
   }
 
   final AuthRepository _authRepository;
+  Timer? _tokenMonitorTimer;
+
+  void _startTokenExpirationMonitor() {
+    // Cancel any existing timer
+    _tokenMonitorTimer?.cancel();
+
+    // Check token status every second
+    _tokenMonitorTimer = Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => unawaited(_checkTokenExpiration()),
+    );
+  }
+
+  Future<void> _checkTokenExpiration() async {
+    // Skip check if we're already in an unauthenticated state
+    if (state is AuthStateUnauthenticated) {
+      return;
+    }
+
+    try {
+      final ({DateTime jwtExpiresAt, DateTime refreshExpiresAt})? tokenInfo =
+          await _authRepository.getTokenExpirations();
+
+      if (tokenInfo == null) {
+        // No token info means we're not authenticated
+        return;
+      }
+
+      final now = DateTime.now();
+
+      // If JWT is expired, log the user out immediately
+      if (tokenInfo.jwtExpiresAt.isBefore(now)) {
+        LOG.i('JWT token expired, logging out user');
+        add(const AuthEventTokenExpired());
+        return;
+      }
+
+      // Also check if refresh token is expired
+      if (tokenInfo.refreshExpiresAt.isBefore(now)) {
+        LOG.i('Refresh token expired, logging out user');
+        add(const AuthEventTokenExpired());
+        return;
+      }
+    } on Exception catch (e) {
+      LOG.e('Error checking token expiration: $e');
+    }
+  }
+
+  // Add this method to handle token expiration
+  Future<void> handleTokenExpired(
+    AuthEventTokenExpired event,
+    Emitter<AuthState> emit,
+  ) async {
+    LOG.i('Token expired, logging out user');
+
+    // First emit a special state indicating session expiry
+    emit(
+      const AuthStateSessionExpired(
+        message: 'Your session has expired. Please log in again.',
+      ),
+    );
+
+    // Then perform logout
+    try {
+      await _authRepository.logout();
+      emit(const AuthStateUnauthenticated());
+    } on Exception catch (e) {
+      LOG.e('Error during automatic logout: $e');
+      // Still mark as unauthenticated even if logout fails
+      emit(const AuthStateUnauthenticated());
+    }
+  }
+
+  @override
+  Future<void> close() {
+    // Clean up timer when bloc is closed
+    _tokenMonitorTimer?.cancel();
+    return super.close();
+  }
 
   Future<void> checkAuth(
     AuthEventCheckAuth event,

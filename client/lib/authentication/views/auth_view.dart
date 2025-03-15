@@ -38,6 +38,15 @@ class _AuthViewState extends State<AuthView> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(state.message)));
+        } else if (state is AuthStateSessionExpired) {
+          // Show a more prominent session expired message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
         }
       },
       builder:

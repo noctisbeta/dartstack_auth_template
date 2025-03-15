@@ -43,3 +43,11 @@ final class AuthEventLogout extends AuthEvent {
   @override
   List<Object?> get props => [];
 }
+
+@immutable
+final class AuthEventTokenExpired extends AuthEvent {
+  const AuthEventTokenExpired();
+
+  @override
+  List<Object?> get props => [];
+}
