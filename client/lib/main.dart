@@ -51,7 +51,6 @@ class AppWithAuthListener extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    scaffoldMessengerKey: GlobalKey<ScaffoldMessengerState>(),
     title: 'Dart Stack Auth Template',
     theme: ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -62,28 +61,42 @@ class AppWithAuthListener extends StatelessWidget {
       '/login': (context) => const AuthView(),
       '/dashboard': (context) => const DashboardView(),
     },
-    builder:
-        (context, child) => BlocListener<AuthBloc, AuthState>(
-          listener: (context, state) {
-            if (state is AuthStateSessionExpired) {
-              // Use the ScaffoldMessenger that's now available from MaterialApp
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Colors.red,
-                  duration: const Duration(seconds: 5),
-                ),
-              );
+    home: const AuthNavigationListener(),
+  );
+}
 
-              // Navigate to login screen
-              unawaited(
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil('/login', (route) => false),
-              );
-            }
-          },
-          child: child ?? const SizedBox.shrink(),
-        ),
+class AuthNavigationListener extends StatelessWidget {
+  const AuthNavigationListener({super.key});
+
+  @override
+  Widget build(BuildContext context) => BlocListener<AuthBloc, AuthState>(
+    listener: (context, state) {
+      if (state is AuthStateSessionExpired) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Session expired, please log in again')),
+        );
+
+        unawaited(
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil('/login', (route) => false),
+        );
+      }
+    },
+    child: Navigator(
+      onGenerateRoute: (settings) {
+        Widget page;
+        switch (settings.name) {
+          case '/login':
+            page = const AuthView();
+          case '/dashboard':
+            page = const DashboardView();
+          default:
+            page = const AuthView();
+        }
+        return MaterialPageRoute(builder: (_) => page);
+      },
+      initialRoute: '/login',
+    ),
   );
 }
