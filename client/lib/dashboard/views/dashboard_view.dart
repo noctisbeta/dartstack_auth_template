@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:client/authentication/repositories/auth_repository.dart';
+import 'package:client/authentication/views/auth_view.dart'; // Add this import
 import 'package:client/dio_wrapper/dio_wrapper.dart';
 import 'package:common/auth/tokens/jwtoken.dart';
 import 'package:common/auth/tokens/refresh_token.dart';
@@ -162,9 +163,41 @@ class _DashboardViewState extends State<DashboardView>
     }
   }
 
+  // Add a logout method
+  Future<void> _logout() async {
+    try {
+      final AuthRepository authRepo = context.read<AuthRepository>();
+      await authRepo.logout();
+
+      // Navigate back to login screen
+      if (mounted) {
+        unawaited(
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const AuthView()),
+          ),
+        );
+      }
+    } on Exception catch (e) {
+      setState(() {
+        _requestResult = 'Error logging out: $e';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('JWT Test Dashboard')),
+    appBar: AppBar(
+      automaticallyImplyLeading: false,
+      title: const Text('JWT Test Dashboard'),
+      actions: [
+        // Add logout button to app bar
+        IconButton(
+          onPressed: _logout,
+          icon: const Icon(Icons.logout),
+          tooltip: 'Logout',
+        ),
+      ],
+    ),
     body: Center(
       child: SingleChildScrollView(
         child: Padding(

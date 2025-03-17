@@ -51,6 +51,7 @@ class AppWithAuthListener extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
+    debugShowCheckedModeBanner: false,
     title: 'Dart Stack Auth Template',
     theme: ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
