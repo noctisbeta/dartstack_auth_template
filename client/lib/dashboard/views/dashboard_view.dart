@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:client/authentication/controllers/auth_bloc.dart';
+import 'package:client/authentication/models/auth_event.dart';
 import 'package:client/authentication/repositories/auth_repository.dart';
-import 'package:client/authentication/views/auth_view.dart'; // Add this import
+import 'package:client/common/widgets/my_snackbar.dart';
 import 'package:client/dio_wrapper/dio_wrapper.dart';
 import 'package:common/auth/tokens/jwtoken.dart';
 import 'package:common/auth/tokens/refresh_token.dart';
@@ -121,6 +123,14 @@ class _DashboardViewState extends State<DashboardView>
       _requestResult = 'Loading...';
     });
 
+    void showSnack(String message, {bool isError = false}) {
+      if (isError) {
+        MySnackBar.showError(context, message);
+      } else {
+        MySnackBar.showInfo(context, message);
+      }
+    }
+
     try {
       final DioWrapper dio = context.read<DioWrapper>();
       final Response response = await dio.get('/api/protected-resource');
@@ -128,10 +138,14 @@ class _DashboardViewState extends State<DashboardView>
       setState(() {
         _requestResult = 'Success: ${response.data}';
       });
+
+      showSnack('API request successful');
     } on Exception catch (e) {
       setState(() {
         _requestResult = 'Error: $e';
       });
+
+      showSnack('Failed to send API request', isError: true);
     }
   }
 
@@ -139,23 +153,15 @@ class _DashboardViewState extends State<DashboardView>
   Future<void> _refreshJwt() async {
     setState(() {
       _isRefreshing = true;
-      _requestResult = 'Refreshing JWT...';
     });
 
     try {
-      final AuthRepository authRepo = context.read<AuthRepository>();
-      await authRepo.refreshJWToken();
+      context.read<AuthBloc>().add(const AuthEventRefreshToken());
 
-      // Update token info immediately after refresh
-      await _updateTokenInfo();
-
-      setState(() {
-        _requestResult = 'JWT refreshed successfully!';
-      });
+      // Show success message
+      MySnackBar.showSuccess(context, 'JWT refreshed successfully');
     } on Exception catch (e) {
-      setState(() {
-        _requestResult = 'Error refreshing JWT: $e';
-      });
+      MySnackBar.showError(context, 'Failed to refresh JWT: $e');
     } finally {
       setState(() {
         _isRefreshing = false;
@@ -163,25 +169,8 @@ class _DashboardViewState extends State<DashboardView>
     }
   }
 
-  // Add a logout method
   Future<void> _logout() async {
-    try {
-      final AuthRepository authRepo = context.read<AuthRepository>();
-      await authRepo.logout();
-
-      // Navigate back to login screen
-      if (mounted) {
-        unawaited(
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const AuthView()),
-          ),
-        );
-      }
-    } on Exception catch (e) {
-      setState(() {
-        _requestResult = 'Error logging out: $e';
-      });
-    }
+    context.read<AuthBloc>().add(const AuthEventLogout());
   }
 
   @override
@@ -190,7 +179,6 @@ class _DashboardViewState extends State<DashboardView>
       automaticallyImplyLeading: false,
       title: const Text('JWT Test Dashboard'),
       actions: [
-        // Add logout button to app bar
         IconButton(
           onPressed: _logout,
           icon: const Icon(Icons.logout),
@@ -307,7 +295,6 @@ class _DashboardViewState extends State<DashboardView>
                 ),
                 const SizedBox(height: 16),
 
-                // Request result
                 if (_requestResult.isNotEmpty)
                   Container(
                     width: double.infinity,

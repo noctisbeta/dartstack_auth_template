@@ -1,11 +1,10 @@
-import 'dart:async';
-
 import 'package:client/authentication/controllers/auth_bloc.dart';
 import 'package:client/authentication/models/auth_event.dart';
 import 'package:client/authentication/models/auth_state.dart';
-import 'package:client/dashboard/views/dashboard_view.dart';
+import 'package:client/common/widgets/my_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class AuthView extends StatefulWidget {
   const AuthView({super.key});
@@ -53,18 +52,12 @@ class _AuthViewState extends State<AuthView>
     body: BlocConsumer<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthStateAuthenticated) {
-          unawaited(
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const DashboardView()),
-            ),
-          );
+          context.goNamed('dashboard');
         } else if (state is AuthStateError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: Colors.red.shade700,
-              behavior: SnackBarBehavior.floating,
-            ),
+          MySnackBar.show(
+            context: context,
+            message: state.message,
+            type: SnackBarType.error,
           );
         }
       },

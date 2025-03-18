@@ -51,3 +51,12 @@ final class AuthEventTokenExpired extends AuthEvent {
   @override
   List<Object?> get props => [];
 }
+
+// Add this new event class
+@immutable
+final class AuthEventRefreshToken extends AuthEvent {
+  const AuthEventRefreshToken();
+
+  @override
+  List<Object?> get props => [];
+}

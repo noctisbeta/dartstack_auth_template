@@ -27,6 +27,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           event,
           emit,
         ), // Add this handler
+        AuthEventRefreshToken() => await refreshToken(event, emit),
       },
     );
 
@@ -108,9 +109,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  // Add this method to handle refreshing the token
+  Future<void> refreshToken(
+    AuthEventRefreshToken event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      await _authRepository.refreshJWToken();
+    } on Exception catch (e) {
+      LOG.e('Error refreshing token: $e');
+      add(const AuthEventTokenExpired());
+    }
+  }
+
   @override
   Future<void> close() {
-    // Clean up timer when bloc is closed
     _tokenMonitorTimer?.cancel();
     return super.close();
   }
