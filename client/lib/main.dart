@@ -8,6 +8,8 @@ import 'package:client/authentication/views/auth_view.dart';
 import 'package:client/common/widgets/my_snackbar.dart';
 import 'package:client/dashboard/views/dashboard_view.dart';
 import 'package:client/dio_wrapper/dio_wrapper.dart';
+import 'package:client/routing/refresh_listenable.dart';
+import 'package:client/routing/router_path.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -39,29 +41,29 @@ class ProviderWrapper extends StatelessWidget {
         BlocProvider<AuthBloc>(
           create:
               (context) =>
-                  AuthBloc(authRepository: context.read<AuthRepository>())
-                    ..add(const AuthEventCheckAuth()),
+                  AuthBloc(authRepository: context.read<AuthRepository>()),
         ),
       ],
-      child: const AuthListenerWrapper(),
+      child: const RouterWrapper(),
     ),
   );
 }
 
-class AuthListenerWrapper extends StatefulWidget {
-  const AuthListenerWrapper({super.key});
+class RouterWrapper extends StatefulWidget {
+  const RouterWrapper({super.key});
 
   @override
-  State<AuthListenerWrapper> createState() => _AuthListenerWrapperState();
+  State<RouterWrapper> createState() => _RouterWrapperState();
 }
 
-class _AuthListenerWrapperState extends State<AuthListenerWrapper> {
+class _RouterWrapperState extends State<RouterWrapper> {
   late final GoRouter _router;
 
   @override
   void initState() {
     super.initState();
     _router = createRouter();
+    context.read<AuthBloc>().add(const AuthEventCheckAuth());
   }
 
   GoRouter createRouter() {
@@ -70,20 +72,19 @@ class _AuthListenerWrapperState extends State<AuthListenerWrapper> {
     return GoRouter(
       routes: [
         GoRoute(
-          path: '/auth',
-          name: 'auth',
+          path: RouterPath.auth.path,
+          name: RouterPath.auth.name,
           builder: (context, state) => const AuthView(),
         ),
         GoRoute(
-          path: '/dashboard',
-          name: 'dashboard',
+          path: RouterPath.dashboard.path,
+          name: RouterPath.dashboard.name,
           builder: (context, state) => const DashboardView(),
         ),
       ],
-      initialLocation: '/auth',
+      initialLocation: RouterPath.auth.path,
       redirect: _redirect,
-      // Add this line to make router refresh when auth state changes
-      refreshListenable: _GoRouterRefresh(authBloc),
+      refreshListenable: RefreshListenable(stream: authBloc.stream),
       debugLogDiagnostics: kDebugMode,
     );
   }
@@ -92,13 +93,13 @@ class _AuthListenerWrapperState extends State<AuthListenerWrapper> {
     final bool isAuthenticated =
         await context.read<AuthRepository>().isAuthenticated();
 
-    final bool isOnAuth = state.uri.toString() == '/auth';
+    final bool isOnAuth = state.uri.toString() == RouterPath.auth.path;
 
     switch ((isAuthenticated, isOnAuth)) {
       case (true, true):
-        return '/dashboard';
+        return RouterPath.dashboard.path;
       case (false, false):
-        return '/auth';
+        return RouterPath.auth.path;
       case (true, false):
         return null;
       case (false, true):
@@ -131,19 +132,4 @@ class _AuthListenerWrapperState extends State<AuthListenerWrapper> {
           child: child ?? const SizedBox.shrink(),
         ),
   );
-}
-
-// Simple class to refresh router when auth state changes
-class _GoRouterRefresh extends ChangeNotifier {
-  _GoRouterRefresh(this._authBloc) {
-    _subscription = _authBloc.stream.listen((_) => notifyListeners());
-  }
-  final AuthBloc _authBloc;
-  StreamSubscription<AuthState>? _subscription;
-
-  @override
-  void dispose() {
-    unawaited(_subscription?.cancel());
-    super.dispose();
-  }
 }
