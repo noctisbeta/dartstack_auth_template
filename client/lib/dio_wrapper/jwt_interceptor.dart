@@ -11,10 +11,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class JwtInterceptor extends InterceptorsWrapper {
   JwtInterceptor({
     required FlutterSecureStorage secureStorage,
-    required this.unauthorizedDio,
+    required this.dioWrapper,
   }) : _storage = secureStorage;
 
-  final DioWrapper unauthorizedDio;
+  final DioWrapper dioWrapper;
   final FlutterSecureStorage _storage;
 
   Future<JWToken?> _refreshToken(
@@ -63,7 +63,7 @@ class JwtInterceptor extends InterceptorsWrapper {
     );
 
     try {
-      final Response response = await unauthorizedDio.post(
+      final Response response = await dioWrapper.post(
         '/auth/refresh',
         data: refreshTokenRequest.toMap(),
       );
@@ -143,7 +143,7 @@ class JwtInterceptor extends InterceptorsWrapper {
 
         requestOptions.headers['Authorization'] = 'Bearer $newToken';
 
-        final Response response = await unauthorizedDio.request(
+        final Response response = await dioWrapper.request(
           requestOptions.path,
           options: Options(
             method: requestOptions.method,

@@ -5,44 +5,24 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 @immutable
 final class DioWrapper {
-  factory DioWrapper.authorized() {
-    final dio = Dio(BaseOptions(baseUrl: 'http://localhost:8080/api/v1'))
-      ..interceptors.add(
-        JwtInterceptor(
-          secureStorage: const FlutterSecureStorage(),
-          unauthorizedDio: DioWrapper.unauthorized(),
-        ),
-      );
-
-    return DioWrapper._(dio);
-  }
-
-  const DioWrapper._(this._dio);
-
-  factory DioWrapper.unauthorized() {
-    final dio = Dio(
-        BaseOptions(
-          baseUrl: 'http://localhost:8080/api/v1',
-          validateStatus:
-              (status) => status != null && status >= 200 && status < 300,
-        ),
-      )
-      ..interceptors.addAll([
-        LogInterceptor(requestBody: true, responseBody: true),
-        InterceptorsWrapper(onError: (e, handler) => handler.next(e)),
-      ]);
-
-    return DioWrapper._(dio);
-  }
+  DioWrapper()
+    : _dio = Dio(
+          BaseOptions(
+            baseUrl: 'http://localhost:8080/api/v1',
+            validateStatus:
+                (status) => status != null && status >= 200 && status < 300,
+          ),
+        )
+        ..interceptors.addAll([
+          LogInterceptor(requestBody: true, responseBody: true),
+          InterceptorsWrapper(onError: (e, handler) => handler.next(e)),
+        ]);
 
   void addAuthInterceptor(FlutterSecureStorage storage) {
     removeAuthInterceptor();
 
     _dio.interceptors.add(
-      JwtInterceptor(
-        secureStorage: storage,
-        unauthorizedDio: DioWrapper.unauthorized(),
-      ),
+      JwtInterceptor(secureStorage: storage, dioWrapper: DioWrapper()),
     );
   }
 
