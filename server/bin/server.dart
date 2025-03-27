@@ -1,9 +1,10 @@
 import 'dart:io';
 
+import 'package:common/logger/logger.dart';
 import 'package:server/auth/security_middleware.dart';
 import 'package:server/postgres/implementations/migration_service.dart';
 import 'package:server/postgres/implementations/postgres_service.dart';
-import 'package:server/routes/routes.dart';
+import 'package:server/routes/root_router.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
 import 'package:shelf_hotreload/shelf_hotreload.dart';
@@ -21,7 +22,7 @@ Future<void> main() async {
   await _initDatabase();
 
   // Create router
-  final Router router = await createRouter();
+  final Router router = await createRootRouter();
 
   // Create handler pipeline
   final Handler handler = const Pipeline()
@@ -38,5 +39,5 @@ Future<void> main() async {
     await serve(handler, InternetAddress.anyIPv4, 8080);
   }
 
-  print('Server running on localhost:8080');
+  LOG.i('Server running on localhost:8080');
 }
