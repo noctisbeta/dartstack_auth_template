@@ -18,7 +18,9 @@ extension RequestExtension on Request {
   int getUserId() {
     final userId = context[ContextKey.userId.keyString] as int?;
     if (userId == null) {
-      throw StateError('userId not found in request context');
+      throw StateError(
+        '${ContextKey.userId.keyString} not found in request context',
+      );
     }
     return userId;
   }
