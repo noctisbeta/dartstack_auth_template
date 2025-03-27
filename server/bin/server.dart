@@ -11,20 +11,17 @@ import 'package:shelf_hotreload/shelf_hotreload.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 Future<void> _initDatabase() async {
-  final PostgresService database = await PostgresService.create();
-  final migrationService = MigrationService(postgresService: database);
+  final PostgresService postgresService = await PostgresService.create();
+  final migrationService = MigrationService(postgresService: postgresService);
 
   await migrationService.up();
 }
 
 Future<void> main() async {
-  // Initialize database and run migrations
   await _initDatabase();
 
-  // Create router
   final Router router = await createRootRouter();
 
-  // Create handler pipeline
   final Handler handler = const Pipeline()
       .addMiddleware(logRequests())
       .addMiddleware(securityMiddleware())

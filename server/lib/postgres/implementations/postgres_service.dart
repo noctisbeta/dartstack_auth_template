@@ -67,6 +67,19 @@ final class PostgresService {
     }
   }
 
+  /// Checks if the database connection is healthy
+  /// Returns true if a simple query succeeds, false otherwise
+  Future<bool> isHealthy() async {
+    try {
+      final Result result = await _conn.execute('SELECT 1');
+
+      return result.isNotEmpty;
+    } on Exception catch (e) {
+      LOG.e('Database health check failed: $e');
+    }
+    return false;
+  }
+
   @Throws([DatabaseException])
   Future<Result> execute(Sql query, {Map<String, dynamic>? parameters}) async {
     try {
