@@ -6,6 +6,7 @@ import 'package:server/postgres/implementations/postgres_service.dart';
 import 'package:server/routes/routes.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart';
+import 'package:shelf_hotreload/shelf_hotreload.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 Future<void> _initDatabase() async {
@@ -28,5 +29,14 @@ Future<void> main() async {
       .addMiddleware(securityMiddleware())
       .addHandler(router.call);
 
-  await serve(handler, InternetAddress.anyIPv4, 8080);
+  final bool enableHotReload =
+      Platform.environment['ENABLE_HOT_RELOAD'] == 'true';
+
+  if (enableHotReload) {
+    withHotreload(() => serve(handler, InternetAddress.anyIPv4, 8080));
+  } else {
+    await serve(handler, InternetAddress.anyIPv4, 8080);
+  }
+
+  print('Server running on localhost:8080');
 }

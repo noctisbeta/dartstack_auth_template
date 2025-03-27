@@ -1,0 +1,8 @@
+# Use latest stable channel SDK for development
+FROM dart:stable
+
+# Expose ports
+EXPOSE 8080
+
+# Run start script
+CMD bash -c "cd /app/common && dart pub get && cd /app/server && dart pub get && dart run --enable-vm-service --enable-asserts bin/server.dart"
