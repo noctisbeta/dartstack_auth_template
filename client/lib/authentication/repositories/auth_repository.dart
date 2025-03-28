@@ -8,9 +8,9 @@ import 'package:common/auth/register/register_error.dart';
 import 'package:common/auth/register/register_request.dart';
 import 'package:common/auth/register/register_response.dart';
 import 'package:common/auth/tokens/jwtoken.dart';
+import 'package:common/auth/tokens/refresh_jwtoken_request.dart';
+import 'package:common/auth/tokens/refresh_jwtoken_response.dart';
 import 'package:common/auth/tokens/refresh_token.dart';
-import 'package:common/auth/tokens/refresh_token_request.dart';
-import 'package:common/auth/tokens/refresh_token_response.dart';
 import 'package:common/auth/tokens/refresh_token_wrapper.dart';
 import 'package:common/auth/user.dart';
 import 'package:common/logger/logger.dart';
@@ -76,7 +76,7 @@ final class AuthRepository {
         refreshTokenString,
       );
 
-      final RefreshTokenRequest refreshTokenRequest = RefreshTokenRequest(
+      final RefreshJWTokenRequest refreshTokenRequest = RefreshJWTokenRequest(
         refreshToken: refreshToken,
       );
 
@@ -85,8 +85,8 @@ final class AuthRepository {
         data: refreshTokenRequest.toMap(),
       );
 
-      final RefreshTokenResponseSuccess refreshTokenResponseSuccess =
-          RefreshTokenResponseSuccess.validatedFromMap(response.data);
+      final RefreshJWTokenResponseSuccess refreshTokenResponseSuccess =
+          RefreshJWTokenResponseSuccess.validatedFromMap(response.data);
 
       final RefreshTokenWrapper refreshTokenWrapper =
           refreshTokenResponseSuccess.refreshTokenWrapper;

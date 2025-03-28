@@ -1,15 +1,18 @@
 import 'dart:io';
 
+import 'package:server/annotations/prefix.dart';
 import 'package:server/auth/auth_data_source.dart';
 import 'package:server/auth/auth_handler.dart';
 import 'package:server/auth/auth_repository.dart';
 import 'package:server/auth/hasher.dart';
+import 'package:server/middleware/content_type_middleware.dart';
 import 'package:server/postgres/implementations/postgres_service.dart';
 import 'package:server/routes/api/v1/auth_router.dart';
 import 'package:server/util/json_response.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
+@Prefix('/api/v1')
 Future<Router> createV1Router() async {
   final PostgresService postgresService = await PostgresService.create();
 
@@ -23,11 +26,14 @@ Future<Router> createV1Router() async {
   final AuthHandler authHandler = AuthHandler(authRepository: authRepository);
 
   final Router authRouter = createAuthRouter(authHandler);
+  final Handler authHandlerWithMiddleware = const Pipeline()
+      .addMiddleware(enforceJsonContentType())
+      .addHandler(authRouter.call);
 
   final router =
       Router()
         ..get('/health', (request) => _healthHandler(request, postgresService))
-        ..mount('/auth', authRouter.call);
+        ..mount('/auth', authHandlerWithMiddleware);
 
   return router;
 }

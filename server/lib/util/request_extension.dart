@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:common/exceptions/throws.dart';
+import 'package:common/annotations/throws.dart';
 import 'package:server/util/context_key.dart';
 import 'package:shelf/shelf.dart';
 

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:common/exceptions/throws.dart';
+import 'package:common/annotations/throws.dart';
 import 'package:common/logger/logger.dart';
 import 'package:postgres/postgres.dart';
 import 'package:server/postgres/exceptions/database_exception.dart';

@@ -1,3 +1,5 @@
+import 'package:common/annotations/propagates.dart';
+import 'package:common/annotations/throws.dart';
 import 'package:common/auth/login/login_error.dart';
 import 'package:common/auth/login/login_request.dart';
 import 'package:common/auth/login/login_response.dart';
@@ -6,19 +8,17 @@ import 'package:common/auth/register/register_request.dart';
 import 'package:common/auth/register/register_response.dart';
 import 'package:common/auth/tokens/jwtoken.dart';
 import 'package:common/auth/tokens/refresh_error.dart';
+import 'package:common/auth/tokens/refresh_jwtoken_request.dart';
+import 'package:common/auth/tokens/refresh_jwtoken_response.dart';
 import 'package:common/auth/tokens/refresh_token.dart';
-import 'package:common/auth/tokens/refresh_token_request.dart';
-import 'package:common/auth/tokens/refresh_token_response.dart';
 import 'package:common/auth/tokens/refresh_token_wrapper.dart';
 import 'package:common/auth/user.dart';
-import 'package:common/exceptions/propagates.dart';
-import 'package:common/exceptions/throws.dart';
 import 'package:server/auth/abstractions/i_auth_repository.dart';
 import 'package:server/auth/auth_data_source.dart';
 import 'package:server/auth/hasher.dart';
 import 'package:server/auth/jwtoken_helper.dart';
-import 'package:server/auth/refresh_token_db.dart';
-import 'package:server/auth/user_db.dart';
+import 'package:server/auth/models/refresh_token_db.dart';
+import 'package:server/auth/models/user_db.dart';
 import 'package:server/postgres/exceptions/database_exception.dart';
 
 final class AuthRepository implements IAuthRepository {
@@ -33,8 +33,8 @@ final class AuthRepository implements IAuthRepository {
   final Hasher _hasher;
 
   @override
-  Future<RefreshTokenResponse> refreshToken(
-    RefreshTokenRequest refreshTokenRequest,
+  Future<RefreshJWTokenResponse> refreshJWToken(
+    RefreshJWTokenRequest refreshTokenRequest,
   ) async {
     final RefreshTokenDB refreshTokenDB = await _authDataSource.getRefreshToken(
       refreshTokenRequest.refreshToken,
@@ -42,7 +42,7 @@ final class AuthRepository implements IAuthRepository {
 
     // Check if token is revoked
     if (refreshTokenDB.isRevoked) {
-      return const RefreshTokenResponseError(
+      return const RefreshJWTokenResponseError(
         message: 'Token has been revoked',
         error: RefreshError.revoked,
       );
@@ -56,7 +56,7 @@ final class AuthRepository implements IAuthRepository {
         reason: 'Potential token compromise',
       );
 
-      return const RefreshTokenResponseError(
+      return const RefreshJWTokenResponseError(
         message: 'Security concern: Token already used',
         error: RefreshError.compromised,
       );
@@ -69,7 +69,7 @@ final class AuthRepository implements IAuthRepository {
         refreshTokenRequest.refreshToken,
       );
 
-      return const RefreshTokenResponseError(
+      return const RefreshJWTokenResponseError(
         message: 'Refresh token expired',
         error: RefreshError.expired,
       );
@@ -89,7 +89,7 @@ final class AuthRepository implements IAuthRepository {
       newRefreshTokenDB.token,
     );
 
-    return RefreshTokenResponseSuccess(
+    return RefreshJWTokenResponseSuccess(
       refreshTokenWrapper: RefreshTokenWrapper(
         refreshToken: refreshToken,
         refreshTokenExpiresAt: newRefreshTokenDB.expiresAt,
@@ -148,7 +148,7 @@ final class AuthRepository implements IAuthRepository {
     String? ipAddress,
     String? userAgent,
   }) async {
-    final bool isUsernameUnique = await _isUniqueUsername(
+    final bool isUsernameUnique = await _authDataSource.isUniqueUsername(
       registerRequest.username,
     );
 
@@ -159,20 +159,26 @@ final class AuthRepository implements IAuthRepository {
       );
     }
 
-    final ({String hashedPassword, String salt}) hashResult = await _hasher
-        .hashPassword(registerRequest.password);
+    final (
+      hashedPassword: String hashedPassword,
+      salt: String salt,
+    ) = await _hasher.hashPassword(registerRequest.password);
 
     @Throws([DatabaseException])
     final UserDB userDB = await _authDataSource.register(
       registerRequest.username,
-      hashResult.hashedPassword,
-      hashResult.salt,
+      hashedPassword,
+      salt,
     );
 
     final (
       JWToken token,
       RefreshTokenWrapper refreshTokenWrapper,
-    ) = await _getTokensFromUserId(userId: userDB.id);
+    ) = await _getTokensFromUserId(
+      userId: userDB.id,
+      ipAddress: ipAddress,
+      userAgent: userAgent,
+    );
 
     final user = User(
       username: userDB.username,
@@ -184,9 +190,6 @@ final class AuthRepository implements IAuthRepository {
 
     return response;
   }
-
-  Future<bool> _isUniqueUsername(String username) =>
-      _authDataSource.isUniqueUsername(username);
 
   Future<(JWToken, RefreshTokenWrapper)> _getTokensFromUserId({
     required int userId,

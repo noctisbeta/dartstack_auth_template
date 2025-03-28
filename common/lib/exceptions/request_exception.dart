@@ -16,11 +16,3 @@ final class BadRequestBodyException extends RequestException {
   @override
   String toString() => 'BadRequestBodyException: $message';
 }
-
-@immutable
-final class BadRequestContentTypeException extends RequestException {
-  const BadRequestContentTypeException(super.message);
-
-  @override
-  String toString() => 'BadContentTypeException: $message';
-}

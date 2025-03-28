@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:common/logger/logger.dart';
-import 'package:server/auth/security_middleware.dart';
+import 'package:server/middleware/security_middleware.dart';
 import 'package:server/postgres/implementations/migration_service.dart';
 import 'package:server/postgres/implementations/postgres_service.dart';
 import 'package:server/routes/root_router.dart';

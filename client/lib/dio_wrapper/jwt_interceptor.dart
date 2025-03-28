@@ -1,8 +1,8 @@
 import 'package:client/dio_wrapper/dio_wrapper.dart';
 import 'package:common/auth/tokens/jwtoken.dart';
+import 'package:common/auth/tokens/refresh_jwtoken_request.dart';
+import 'package:common/auth/tokens/refresh_jwtoken_response.dart';
 import 'package:common/auth/tokens/refresh_token.dart';
-import 'package:common/auth/tokens/refresh_token_request.dart';
-import 'package:common/auth/tokens/refresh_token_response.dart';
 import 'package:common/auth/tokens/refresh_token_wrapper.dart';
 import 'package:common/logger/logger.dart';
 import 'package:dio/dio.dart';
@@ -58,7 +58,7 @@ class JwtInterceptor extends InterceptorsWrapper {
       );
     }
 
-    final RefreshTokenRequest refreshTokenRequest = RefreshTokenRequest(
+    final RefreshJWTokenRequest refreshTokenRequest = RefreshJWTokenRequest(
       refreshToken: refreshToken,
     );
 
@@ -68,10 +68,13 @@ class JwtInterceptor extends InterceptorsWrapper {
         data: refreshTokenRequest.toMap(),
       );
 
-      final RefreshTokenResponseSuccess refreshTokenResponse =
-          RefreshTokenResponseSuccess.validatedFromMap(
+      final RefreshJWTokenResponseSuccess refreshTokenResponse =
+          RefreshJWTokenResponseSuccess.validatedFromMap(
             response.data as Map<String, dynamic>,
           );
+      RefreshJWTokenResponseSuccess.validatedFromMap(
+        response.data as Map<String, dynamic>,
+      );
 
       final RefreshTokenWrapper refreshTokenWrapper =
           refreshTokenResponse.refreshTokenWrapper;

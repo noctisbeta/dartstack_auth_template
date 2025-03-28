@@ -1,7 +1,7 @@
 import 'package:common/abstractions/models.dart';
+import 'package:common/annotations/throws.dart';
 import 'package:common/auth/tokens/refresh_token.dart';
 import 'package:common/exceptions/bad_map_shape_exception.dart';
-import 'package:common/exceptions/throws.dart';
 import 'package:meta/meta.dart';
 
 @immutable

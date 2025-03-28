@@ -1,32 +1,32 @@
 import 'package:common/abstractions/models.dart';
+import 'package:common/annotations/throws.dart';
 import 'package:common/auth/tokens/jwtoken.dart';
 import 'package:common/auth/tokens/refresh_error.dart';
 import 'package:common/auth/tokens/refresh_token_wrapper.dart';
 import 'package:common/exceptions/bad_map_shape_exception.dart';
-import 'package:common/exceptions/throws.dart';
 import 'package:meta/meta.dart';
 
 @immutable
-sealed class RefreshTokenResponse extends ResponseDTO {
-  const RefreshTokenResponse();
+sealed class RefreshJWTokenResponse extends ResponseDTO {
+  const RefreshJWTokenResponse();
 }
 
 @immutable
-final class RefreshTokenResponseSuccess extends RefreshTokenResponse {
-  const RefreshTokenResponseSuccess({
+final class RefreshJWTokenResponseSuccess extends RefreshJWTokenResponse {
+  const RefreshJWTokenResponseSuccess({
     required this.refreshTokenWrapper,
     required this.jwToken,
   });
 
   @Throws([BadMapShapeException])
-  factory RefreshTokenResponseSuccess.validatedFromMap(
+  factory RefreshJWTokenResponseSuccess.validatedFromMap(
     Map<String, dynamic> map,
   ) => switch (map) {
     {
       'refresh_token_wrapper': final Map<String, dynamic> refreshTokenWrapper,
       'jw_token': final String jwTokenString,
     } =>
-      RefreshTokenResponseSuccess(
+      RefreshJWTokenResponseSuccess(
         refreshTokenWrapper: RefreshTokenWrapper.validatedFromMap(
           refreshTokenWrapper,
         ),
@@ -34,7 +34,7 @@ final class RefreshTokenResponseSuccess extends RefreshTokenResponse {
       ),
     _ =>
       throw const BadMapShapeException(
-        'Invalid map format for RefreshTokenResponseSuccess',
+        'Invalid map format for RefreshJWTokenResponseSuccess',
       ),
   };
   final RefreshTokenWrapper refreshTokenWrapper;
@@ -50,31 +50,34 @@ final class RefreshTokenResponseSuccess extends RefreshTokenResponse {
   };
 
   @override
-  RefreshTokenResponseSuccess copyWith({
+  RefreshJWTokenResponseSuccess copyWith({
     RefreshTokenWrapper? refreshTokenWrapper,
     JWToken? jwToken,
-  }) => RefreshTokenResponseSuccess(
+  }) => RefreshJWTokenResponseSuccess(
     refreshTokenWrapper: refreshTokenWrapper ?? this.refreshTokenWrapper,
     jwToken: jwToken ?? this.jwToken,
   );
 }
 
 @immutable
-final class RefreshTokenResponseError extends RefreshTokenResponse {
-  const RefreshTokenResponseError({required this.message, required this.error});
+final class RefreshJWTokenResponseError extends RefreshJWTokenResponse {
+  const RefreshJWTokenResponseError({
+    required this.message,
+    required this.error,
+  });
 
   @Throws([BadMapShapeException])
-  factory RefreshTokenResponseError.validatedFromMap(
+  factory RefreshJWTokenResponseError.validatedFromMap(
     Map<String, dynamic> map,
   ) => switch (map) {
     {'message': final String message, 'error': final String error} =>
-      RefreshTokenResponseError(
+      RefreshJWTokenResponseError(
         message: message,
         error: RefreshError.fromString(error),
       ),
     _ =>
       throw const BadMapShapeException(
-        'Invalid map format for RefreshTokenResponseError',
+        'Invalid map format for RefreshJWTokenResponseError',
       ),
   };
 
@@ -91,9 +94,11 @@ final class RefreshTokenResponseError extends RefreshTokenResponse {
   };
 
   @override
-  RefreshTokenResponseError copyWith({String? message, RefreshError? error}) =>
-      RefreshTokenResponseError(
-        message: message ?? this.message,
-        error: error ?? this.error,
-      );
+  RefreshJWTokenResponseError copyWith({
+    String? message,
+    RefreshError? error,
+  }) => RefreshJWTokenResponseError(
+    message: message ?? this.message,
+    error: error ?? this.error,
+  );
 }

@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:common/annotations/propagates.dart';
+import 'package:common/annotations/throws.dart';
 import 'package:common/auth/tokens/refresh_token.dart';
-import 'package:common/exceptions/propagates.dart';
-import 'package:common/exceptions/throws.dart';
 import 'package:common/logger/logger.dart';
 import 'package:postgres/postgres.dart';
-import 'package:server/auth/refresh_token_db.dart';
-import 'package:server/auth/user_db.dart';
+import 'package:server/auth/models/refresh_token_db.dart';
+import 'package:server/auth/models/user_db.dart';
 import 'package:server/postgres/exceptions/database_exception.dart';
 import 'package:server/postgres/implementations/postgres_service.dart';
 
@@ -17,13 +17,11 @@ final class AuthDataSource {
 
   final PostgresService _db;
 
-  Future<void> deleteRefreshToken(RefreshToken token) async {
-    @Throws([DatabaseException])
-    final Result _ = await _db.execute(
-      Sql.named('DELETE FROM refresh_tokens WHERE token = @token;'),
-      parameters: {'token': token},
-    );
-  }
+  @Propagates([DatabaseException])
+  Future<void> deleteRefreshToken(RefreshToken token) => _db.execute(
+    Sql.named('DELETE FROM refresh_tokens WHERE token = @token;'),
+    parameters: {'token': token},
+  );
 
   Future<RefreshTokenDB> getRefreshToken(RefreshToken token) async {
     @Throws([DatabaseException])
@@ -163,6 +161,7 @@ final class AuthDataSource {
 
   /// Rotates a refresh token by invalidating the old one and creating a new one
   /// This maintains an audit trail and enhances security
+  
   Future<RefreshTokenDB> rotateRefreshToken(
     RefreshToken oldToken,
     int userId, {
