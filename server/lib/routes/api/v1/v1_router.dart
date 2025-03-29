@@ -1,10 +1,10 @@
 import 'dart:io';
 
 import 'package:server/annotations/prefix.dart';
-import 'package:server/auth/auth_data_source.dart';
-import 'package:server/auth/auth_handler.dart';
-import 'package:server/auth/auth_repository.dart';
 import 'package:server/auth/hasher.dart';
+import 'package:server/auth/implementations/auth_data_source.dart';
+import 'package:server/auth/implementations/auth_handler.dart';
+import 'package:server/auth/implementations/auth_repository.dart';
 import 'package:server/middleware/content_type_middleware.dart';
 import 'package:server/postgres/implementations/postgres_service.dart';
 import 'package:server/routes/api/v1/auth_router.dart';
@@ -62,13 +62,13 @@ Future<Response> _healthHandler(
       'latency': {'database': '$latencyMs ms'},
     };
 
-    return JsonResponse(
+    return JsonResponse.other(
       body: healthData,
       statusCode:
           isDatabaseHealthy ? HttpStatus.ok : HttpStatus.serviceUnavailable,
     );
   } on Exception catch (e) {
-    return JsonResponse(
+    return JsonResponse.other(
       body: {
         'status': 'DOWN',
         'timestamp': DateTime.now().toUtc().toIso8601String(),

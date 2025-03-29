@@ -14,8 +14,8 @@ import 'package:common/auth/tokens/refresh_token.dart';
 import 'package:common/auth/tokens/refresh_token_wrapper.dart';
 import 'package:common/auth/user.dart';
 import 'package:server/auth/abstractions/i_auth_repository.dart';
-import 'package:server/auth/auth_data_source.dart';
 import 'package:server/auth/hasher.dart';
+import 'package:server/auth/implementations/auth_data_source.dart';
 import 'package:server/auth/jwtoken_helper.dart';
 import 'package:server/auth/models/refresh_token_db.dart';
 import 'package:server/auth/models/user_db.dart';
@@ -36,6 +36,7 @@ final class AuthRepository implements IAuthRepository {
   Future<RefreshJWTokenResponse> refreshJWToken(
     RefreshJWTokenRequest refreshTokenRequest,
   ) async {
+    @Throws([DatabaseException])
     final RefreshTokenDB refreshTokenDB = await _authDataSource.getRefreshToken(
       refreshTokenRequest.refreshToken,
     );

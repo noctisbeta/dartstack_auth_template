@@ -1,21 +1,19 @@
 import 'package:common/abstractions/models.dart';
-import 'package:common/exceptions/request_exception.dart';
+import 'package:common/annotations/throws.dart';
+import 'package:common/exceptions/bad_map_shape_exception.dart';
 import 'package:meta/meta.dart';
 
 @immutable
 final class LoginRequest extends RequestDTO {
   const LoginRequest({required this.username, required this.password});
 
-  /// Throws [BadRequestBodyException].
+  @Throws([BadMapShapeException])
   factory LoginRequest.validatedFromMap(
     Map<String, dynamic> map,
   ) => switch (map) {
     {'username': final String username, 'password': final String password} =>
       LoginRequest(username: username, password: password),
-    _ =>
-      throw const BadRequestBodyException(
-        'Invalid map format for LoginRequest',
-      ),
+    _ => throw const BadMapShapeException('Invalid map shape for LoginRequest'),
   };
 
   final String username;

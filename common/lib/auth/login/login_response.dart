@@ -1,7 +1,8 @@
 import 'package:common/abstractions/models.dart';
+import 'package:common/annotations/throws.dart';
 import 'package:common/auth/login/login_error.dart';
 import 'package:common/auth/user.dart';
-import 'package:common/exceptions/response_exception.dart';
+import 'package:common/exceptions/bad_map_shape_exception.dart';
 import 'package:meta/meta.dart';
 
 @immutable
@@ -19,8 +20,8 @@ final class LoginResponseSuccess extends LoginResponse {
           user: User.validatedFromMap(user),
         ),
         _ =>
-          throw const BadResponseBodyException(
-            'Invalid map format for RegisterResponse',
+          throw const BadMapShapeException(
+            'Invalid map format for LoginResponseSuccess',
           ),
       };
 
@@ -41,13 +42,14 @@ final class LoginResponseSuccess extends LoginResponse {
 final class LoginResponseError extends LoginResponse {
   const LoginResponseError({required this.message, required this.error});
 
+  @Throws([BadMapShapeException])
   factory LoginResponseError.validatedFromMap(
     Map<String, dynamic> map,
   ) => switch (map) {
     {'message': final String message, 'error': final String error} =>
       LoginResponseError(message: message, error: LoginError.fromString(error)),
     _ =>
-      throw const BadResponseBodyException(
+      throw const BadMapShapeException(
         'Invalid map format for LoginResponseError',
       ),
   };

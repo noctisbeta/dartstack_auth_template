@@ -17,7 +17,7 @@ Future<Router> createRootRouter() async {
   return router;
 }
 
-Future<Response> _rootRouteHandler(Request request) async => JsonResponse(
+Future<Response> _rootRouteHandler(Request request) async => JsonResponse.ok(
   body: {
     'name': 'DartstackAuthTemplate API',
     'version': '1.0.0',
@@ -25,6 +25,6 @@ Future<Response> _rootRouteHandler(Request request) async => JsonResponse(
   },
 );
 
-Future<Response> _healthHandler(Request request) async => JsonResponse(
+Future<Response> _healthHandler(Request request) async => JsonResponse.ok(
   body: {'status': 'UP', 'timestamp': DateTime.now().toUtc().toIso8601String()},
 );

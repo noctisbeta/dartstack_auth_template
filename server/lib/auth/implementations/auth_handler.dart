@@ -1,14 +1,16 @@
 import 'dart:io';
 
 import 'package:common/annotations/throws.dart';
+import 'package:common/auth/login/login_error.dart';
 import 'package:common/auth/login/login_request.dart';
 import 'package:common/auth/login/login_response.dart';
 import 'package:common/auth/register/register_error.dart';
 import 'package:common/auth/register/register_request.dart';
 import 'package:common/auth/register/register_response.dart';
+import 'package:common/auth/tokens/refresh_error.dart';
 import 'package:common/auth/tokens/refresh_jwtoken_request.dart';
 import 'package:common/auth/tokens/refresh_jwtoken_response.dart';
-import 'package:common/exceptions/request_exception.dart';
+import 'package:common/exceptions/bad_map_shape_exception.dart';
 import 'package:server/auth/abstractions/i_auth_handler.dart';
 import 'package:server/auth/abstractions/i_auth_repository.dart';
 import 'package:server/postgres/exceptions/database_exception.dart';
@@ -28,6 +30,7 @@ final class AuthHandler implements IAuthHandler {
       @Throws([FormatException])
       final Map<String, dynamic> json = await request.json();
 
+      @Throws([BadMapShapeException])
       final refreshTokenRequest = RefreshJWTokenRequest.validatedFromMap(json);
 
       final RefreshJWTokenResponse refreshTokenResponse = await _authRepository
@@ -35,18 +38,44 @@ final class AuthHandler implements IAuthHandler {
 
       switch (refreshTokenResponse) {
         case RefreshJWTokenResponseSuccess():
-          return JsonResponse(body: refreshTokenResponse.toMap());
-        case RefreshJWTokenResponseError():
-          return JsonResponse(
-            statusCode: HttpStatus.unauthorized,
-            body: refreshTokenResponse.toMap(),
-          );
+          return JsonResponse.ok(body: refreshTokenResponse.toMap());
+        case RefreshJWTokenResponseError(:final error):
+          switch (error) {
+            case RefreshError.expired:
+              return JsonResponse.unauthorized(
+                body: refreshTokenResponse.toMap(),
+              );
+            case RefreshError.compromised:
+              return JsonResponse.unauthorized(
+                body: refreshTokenResponse.toMap(),
+              );
+            case RefreshError.revoked:
+              return JsonResponse.forbidden(body: refreshTokenResponse.toMap());
+            case RefreshError.unknownRefreshError:
+              return JsonResponse.internalServerError(
+                body: refreshTokenResponse.toMap(),
+              );
+          }
       }
-    } on Exception catch (e) {
+    } on FormatException catch (e) {
       return Response(
-        HttpStatus.internalServerError,
-        body: 'Failed to refresh token: $e',
+        HttpStatus.badRequest,
+        body: 'Invalid request! Bad JSON. $e',
       );
+    } on BadMapShapeException catch (e) {
+      return Response(
+        HttpStatus.badRequest,
+        body: 'Invalid request! Bad request map shape. $e',
+      );
+    } on DatabaseException catch (e) {
+      switch (e) {
+        case DBEuniqueViolation():
+        case DBEunknown():
+        case DBEbadCertificate():
+        case DBEbadSchema():
+        case DBEemptyResult():
+          return Response(HttpStatus.notFound, body: 'User does not exist! $e');
+      }
     }
   }
 
@@ -56,7 +85,7 @@ final class AuthHandler implements IAuthHandler {
       @Throws([FormatException])
       final Map<String, dynamic> json = await request.json();
 
-      @Throws([BadRequestBodyException])
+      @Throws([BadMapShapeException])
       final loginRequest = LoginRequest.validatedFromMap(json);
 
       final (
@@ -73,17 +102,29 @@ final class AuthHandler implements IAuthHandler {
 
       switch (loginResponse) {
         case LoginResponseSuccess():
-          return JsonResponse(body: loginResponse.toMap());
-        case LoginResponseError():
-          return JsonResponse(
-            statusCode: HttpStatus.unauthorized,
-            body: loginResponse.toMap(),
-          );
+          return JsonResponse.ok(body: loginResponse.toMap());
+        case LoginResponseError(:final error):
+          switch (error) {
+            case LoginError.wrongPassword:
+              return JsonResponse.unauthorized(body: loginResponse.toMap());
+            case LoginError.userNotFound:
+              return JsonResponse.notFound(body: loginResponse.toMap());
+            case LoginError.unknownLoginError:
+              return JsonResponse.internalServerError(
+                body: loginResponse.toMap(),
+              );
+          }
       }
     } on FormatException catch (e) {
-      return Response(HttpStatus.badRequest, body: 'Invalid request! $e');
-    } on BadRequestBodyException catch (e) {
-      return Response(HttpStatus.badRequest, body: 'Invalid request! $e');
+      return Response(
+        HttpStatus.badRequest,
+        body: 'Invalid request! Bad JSON. $e',
+      );
+    } on BadMapShapeException catch (e) {
+      return Response(
+        HttpStatus.badRequest,
+        body: 'Invalid request! Bad request map shape. $e',
+      );
     } on DatabaseException catch (e) {
       switch (e) {
         case DBEuniqueViolation():
@@ -102,7 +143,7 @@ final class AuthHandler implements IAuthHandler {
       @Throws([FormatException])
       final Map<String, dynamic> json = await request.json();
 
-      @Throws([BadRequestBodyException])
+      @Throws([BadMapShapeException])
       final registerRequest = RegisterRequest.validatedFromMap(json);
 
       final (
@@ -119,20 +160,13 @@ final class AuthHandler implements IAuthHandler {
 
       switch (registerResponse) {
         case RegisterResponseSuccess():
-          return JsonResponse(
-            statusCode: HttpStatus.created,
-            body: registerResponse.toMap(),
-          );
+          return JsonResponse.created(body: registerResponse.toMap());
         case RegisterResponseError(:final error):
           switch (error) {
             case RegisterError.usernameAlreadyExists:
-              return JsonResponse(
-                statusCode: HttpStatus.conflict,
-                body: registerResponse.toMap(),
-              );
+              return JsonResponse.conflict(body: registerResponse.toMap());
             case RegisterError.unknownRegisterError:
-              return JsonResponse(
-                statusCode: HttpStatus.internalServerError,
+              return JsonResponse.internalServerError(
                 body: registerResponse.toMap(),
               );
           }
@@ -142,10 +176,10 @@ final class AuthHandler implements IAuthHandler {
         HttpStatus.badRequest,
         body: 'Invalid request! Bad JSON. $e',
       );
-    } on BadRequestBodyException catch (e) {
+    } on BadMapShapeException catch (e) {
       return Response(
         HttpStatus.badRequest,
-        body: 'Invalid request! Bad request body. $e',
+        body: 'Invalid request! Bad request map shape. $e',
       );
     } on DatabaseException catch (e) {
       switch (e) {

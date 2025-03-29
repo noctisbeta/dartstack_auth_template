@@ -93,4 +93,17 @@ final class PostgresService {
       throw DBEbadCertificate(e.toString());
     }
   }
+
+  Future<T> executeAndMap<T>({
+    required Sql query,
+    required T Function(Map<String, dynamic>) mapper,
+    required String emptyResultMessage,
+    Map<String, dynamic>? parameters,
+  }) async {
+    final Result result = await execute(query, parameters: parameters);
+    if (result.isEmpty) {
+      throw DBEemptyResult(emptyResultMessage);
+    }
+    return mapper(result.first.toColumnMap());
+  }
 }

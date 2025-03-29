@@ -2,7 +2,7 @@ import 'package:common/abstractions/models.dart';
 import 'package:common/annotations/throws.dart';
 import 'package:common/auth/register/register_error.dart';
 import 'package:common/auth/user.dart';
-import 'package:common/exceptions/response_exception.dart';
+import 'package:common/exceptions/bad_map_shape_exception.dart';
 import 'package:meta/meta.dart';
 
 @immutable
@@ -14,14 +14,14 @@ sealed class RegisterResponse extends ResponseDTO {
 final class RegisterResponseSuccess extends RegisterResponse {
   const RegisterResponseSuccess({required this.user});
 
-  @Throws([BadResponseBodyException])
+  @Throws([BadMapShapeException])
   factory RegisterResponseSuccess.validatedFromMap(Map<String, dynamic> map) =>
       switch (map) {
         {'user': final Map<String, dynamic> user} => RegisterResponseSuccess(
           user: User.validatedFromMap(user),
         ),
         _ =>
-          throw const BadResponseBodyException(
+          throw const BadMapShapeException(
             'Invalid map format for RegisterResponseSuccess',
           ),
       };
@@ -43,6 +43,7 @@ final class RegisterResponseSuccess extends RegisterResponse {
 final class RegisterResponseError extends RegisterResponse {
   const RegisterResponseError({required this.message, required this.error});
 
+  @Throws([BadMapShapeException])
   factory RegisterResponseError.validatedFromMap(Map<String, dynamic> map) =>
       switch (map) {
         {'message': final String message, 'error': final String error} =>
@@ -51,7 +52,7 @@ final class RegisterResponseError extends RegisterResponse {
             error: RegisterError.fromString(error),
           ),
         _ =>
-          throw const BadResponseBodyException(
+          throw const BadMapShapeException(
             'Invalid map format for RegisterResponseError',
           ),
       };

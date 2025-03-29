@@ -6,38 +6,35 @@ import 'package:common/annotations/throws.dart';
 import 'package:common/auth/tokens/refresh_token.dart';
 import 'package:common/logger/logger.dart';
 import 'package:postgres/postgres.dart';
+import 'package:server/auth/abstractions/i_auth_data_source.dart';
 import 'package:server/auth/models/refresh_token_db.dart';
 import 'package:server/auth/models/user_db.dart';
 import 'package:server/postgres/exceptions/database_exception.dart';
 import 'package:server/postgres/implementations/postgres_service.dart';
 
-final class AuthDataSource {
+final class AuthDataSource implements IAuthDataSource {
   AuthDataSource({required PostgresService postgresService})
     : _db = postgresService;
 
   final PostgresService _db;
 
+  @override
   @Propagates([DatabaseException])
   Future<void> deleteRefreshToken(RefreshToken token) => _db.execute(
     Sql.named('DELETE FROM refresh_tokens WHERE token = @token;'),
     parameters: {'token': token},
   );
 
+  @override
+  @Propagates([DatabaseException])
   Future<RefreshTokenDB> getRefreshToken(RefreshToken token) async {
     @Throws([DatabaseException])
-    final Result res = await _db.execute(
-      Sql.named('SELECT * FROM refresh_tokens WHERE token = @token;'),
+    final RefreshTokenDB refreshTokenDB = await _db.executeAndMap(
+      query: Sql.named('SELECT * FROM refresh_tokens WHERE token = @token;'),
       parameters: {'token': token},
+      mapper: RefreshTokenDB.validatedFromMap,
+      emptyResultMessage: 'No refresh token found with that token.',
     );
-
-    if (res.isEmpty) {
-      throw const DBEemptyResult('No refresh token found with that token.');
-    }
-
-    final Map<String, dynamic> resCol = res.first.toColumnMap();
-
-    @Throws([DBEbadSchema])
-    final refreshTokenDB = RefreshTokenDB.validatedFromMap(resCol);
 
     return refreshTokenDB;
   }
@@ -48,6 +45,7 @@ final class AuthDataSource {
     return RefreshToken.fromRefreshTokenString(base64Url.encode(bytes));
   }
 
+  @override
   Future<RefreshTokenDB> storeRefreshToken({
     required int userId,
     required String? userAgent,
@@ -60,17 +58,15 @@ final class AuthDataSource {
     );
 
     @Throws([DatabaseException])
-    final Result res = await _db.execute(
-      Sql.named('''
-      INSERT INTO refresh_tokens (
-        user_id, 
-        token, 
-        expires_at, 
-        user_agent,
-        ip_address
-      )
-      VALUES (@user_id, @token, @expires_at, @user_agent, @ip_address)
-      RETURNING *;
+    final RefreshTokenDB refreshTokenDB = await _db.executeAndMap(
+      query: Sql.named('''
+        INSERT INTO refresh_tokens (
+          user_id, token, expires_at, user_agent, ip_address
+        )
+        VALUES (
+          @user_id, @token, @expires_at, @user_agent, @ip_address
+        )
+        RETURNING *;
       '''),
       parameters: {
         'user_id': userId,
@@ -79,44 +75,30 @@ final class AuthDataSource {
         'user_agent': userAgent,
         'ip_address': ipAddress,
       },
+      mapper: RefreshTokenDB.validatedFromMap,
+      emptyResultMessage: 'Failed to insert refresh token into database.',
     );
-
-    if (res.isEmpty) {
-      throw const DBEemptyResult(
-        'Failed to insert refresh token into database.',
-      );
-    }
-
-    final Map<String, dynamic> resCol = res.first.toColumnMap();
-
-    @Throws([DBEbadSchema])
-    final refreshTokenDB = RefreshTokenDB.validatedFromMap(resCol);
 
     return refreshTokenDB;
   }
 
-  @Throws([DBEemptyResult, DBEbadSchema])
+  @override
   @Propagates([DatabaseException])
   Future<UserDB> login(String username) async {
     @Throws([DatabaseException])
-    final Result res = await _db.execute(
-      Sql.named('SELECT * FROM users WHERE username = @username;'),
+    final UserDB userDB = await _db.executeAndMap(
+      query: Sql.named('''
+        SELECT * FROM users WHERE username = @username;
+      '''),
       parameters: {'username': username},
+      mapper: UserDB.validatedFromMap,
+      emptyResultMessage: 'No user found with that username.',
     );
-
-    if (res.isEmpty) {
-      throw const DBEemptyResult('No user found with that username.');
-    }
-
-    final Map<String, dynamic> resCol = res.first.toColumnMap();
-
-    @Throws([DBEbadSchema])
-    final userDB = UserDB.validatedFromMap(resCol);
 
     return userDB;
   }
 
-  @Throws([DBEemptyResult, DBEbadSchema])
+  @override
   @Propagates([DatabaseException])
   Future<UserDB> register(
     String username,
@@ -124,8 +106,8 @@ final class AuthDataSource {
     String salt,
   ) async {
     @Throws([DatabaseException])
-    final Result res = await _db.execute(
-      Sql.named('''
+    final UserDB userDB = await _db.executeAndMap(
+      query: Sql.named('''
         INSERT INTO users (username, hashed_password, salt)
         VALUES (@username, @hashedPassword, @salt) RETURNING *;
       '''),
@@ -134,20 +116,14 @@ final class AuthDataSource {
         'hashedPassword': hashedPassword,
         'salt': salt,
       },
+      mapper: UserDB.validatedFromMap,
+      emptyResultMessage: 'Failed to insert user into database.',
     );
-
-    if (res.isEmpty) {
-      throw const DBEemptyResult('Failed to insert user into database.');
-    }
-
-    final Map<String, dynamic> resCol = res.first.toColumnMap();
-
-    @Throws([DBEbadSchema])
-    final userDB = UserDB.validatedFromMap(resCol);
 
     return userDB;
   }
 
+  @override
   @Propagates([DatabaseException])
   Future<bool> isUniqueUsername(String username) async {
     @Throws([DatabaseException])
@@ -161,7 +137,7 @@ final class AuthDataSource {
 
   /// Rotates a refresh token by invalidating the old one and creating a new one
   /// This maintains an audit trail and enhances security
-  
+  @override
   Future<RefreshTokenDB> rotateRefreshToken(
     RefreshToken oldToken,
     int userId, {
@@ -169,6 +145,7 @@ final class AuthDataSource {
     String? userAgent,
   }) async {
     // Get the old token data with its client context
+    @Throws([DatabaseException])
     final RefreshTokenDB oldTokenData = await getRefreshToken(oldToken);
 
     // Use transaction to ensure atomicity
@@ -176,9 +153,9 @@ final class AuthDataSource {
       // Mark old token as used (don't delete it)
       await connection.execute(
         Sql.named(
-          'UPDATE refresh_tokens SET is_used = TRUE WHERE token = @token',
+          'UPDATE refresh_tokens SET is_used = TRUE WHERE token = @old_token',
         ),
-        parameters: {'token': oldToken},
+        parameters: {'old_token': oldToken},
       );
 
       // Create new token with same client context as the old one
@@ -219,6 +196,8 @@ final class AuthDataSource {
   /// This is a security measure typically used when token theft is suspected
   /// [userId] The ID of the user whose tokens should be revoked
   /// [reason] Optional reason for the revocation (useful for audit logs)
+  @override
+  @Throws([DatabaseException])
   Future<void> revokeAllUserTokens(int userId, {String? reason}) async {
     final DateTime revokedAt = DateTime.now().toUtc();
 
