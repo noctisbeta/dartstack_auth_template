@@ -6,7 +6,7 @@ import 'package:server/auth/implementations/auth_data_source.dart';
 import 'package:server/auth/implementations/auth_handler.dart';
 import 'package:server/auth/implementations/auth_repository.dart';
 import 'package:server/middleware/content_type_middleware.dart';
-import 'package:server/postgres/implementations/postgres_service.dart';
+import 'package:server/postgres/postgres_service.dart';
 import 'package:server/routes/api/v1/auth_router.dart';
 import 'package:server/util/json_response.dart';
 import 'package:shelf/shelf.dart';

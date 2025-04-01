@@ -9,27 +9,20 @@ import 'package:postgres/postgres.dart';
 import 'package:server/auth/abstractions/i_auth_data_source.dart';
 import 'package:server/auth/models/refresh_token_db.dart';
 import 'package:server/auth/models/user_db.dart';
-import 'package:server/postgres/exceptions/database_exception.dart';
-import 'package:server/postgres/implementations/postgres_service.dart';
+import 'package:server/postgres/database_exception.dart';
+import 'package:server/postgres/i_postgres_service.dart';
 
 final class AuthDataSource implements IAuthDataSource {
-  AuthDataSource({required PostgresService postgresService})
-    : _db = postgresService;
+  AuthDataSource({required IPostgresService postgresService})
+    : _ps = postgresService;
 
-  final PostgresService _db;
-
-  @override
-  @Propagates([DatabaseException])
-  Future<void> deleteRefreshToken(RefreshToken token) => _db.execute(
-    Sql.named('DELETE FROM refresh_tokens WHERE token = @token;'),
-    parameters: {'token': token},
-  );
+  final IPostgresService _ps;
 
   @override
   @Propagates([DatabaseException])
   Future<RefreshTokenDB> getRefreshToken(RefreshToken token) async {
     @Throws([DatabaseException])
-    final RefreshTokenDB refreshTokenDB = await _db.executeAndMap(
+    final RefreshTokenDB refreshTokenDB = await _ps.executeAndMap(
       query: Sql.named('SELECT * FROM refresh_tokens WHERE token = @token;'),
       parameters: {'token': token},
       mapper: RefreshTokenDB.validatedFromMap,
@@ -37,6 +30,20 @@ final class AuthDataSource implements IAuthDataSource {
     );
 
     return refreshTokenDB;
+  }
+
+  @Propagates([DatabaseException])
+  Future<void> markRefreshTokenExpired(RefreshToken token) async {
+    await _ps.execute(
+      Sql.named('''
+      UPDATE refresh_tokens 
+      SET is_used = true, 
+          is_revoked = true, 
+          revocation_reason = 'Token expired'
+      WHERE token = @token;
+    '''),
+      parameters: {'token': token},
+    );
   }
 
   RefreshToken _generateRefreshToken() {
@@ -58,7 +65,7 @@ final class AuthDataSource implements IAuthDataSource {
     );
 
     @Throws([DatabaseException])
-    final RefreshTokenDB refreshTokenDB = await _db.executeAndMap(
+    final RefreshTokenDB refreshTokenDB = await _ps.executeAndMap(
       query: Sql.named('''
         INSERT INTO refresh_tokens (
           user_id, token, expires_at, user_agent, ip_address
@@ -86,7 +93,7 @@ final class AuthDataSource implements IAuthDataSource {
   @Propagates([DatabaseException])
   Future<UserDB> login(String username) async {
     @Throws([DatabaseException])
-    final UserDB userDB = await _db.executeAndMap(
+    final UserDB userDB = await _ps.executeAndMap(
       query: Sql.named('''
         SELECT * FROM users WHERE username = @username;
       '''),
@@ -106,7 +113,7 @@ final class AuthDataSource implements IAuthDataSource {
     String salt,
   ) async {
     @Throws([DatabaseException])
-    final UserDB userDB = await _db.executeAndMap(
+    final UserDB userDB = await _ps.executeAndMap(
       query: Sql.named('''
         INSERT INTO users (username, hashed_password, salt)
         VALUES (@username, @hashedPassword, @salt) RETURNING *;
@@ -127,7 +134,7 @@ final class AuthDataSource implements IAuthDataSource {
   @Propagates([DatabaseException])
   Future<bool> isUniqueUsername(String username) async {
     @Throws([DatabaseException])
-    final Result res = await _db.execute(
+    final Result res = await _ps.execute(
       Sql.named('SELECT 1 FROM users WHERE username = @username;'),
       parameters: {'username': username},
     );
@@ -137,10 +144,11 @@ final class AuthDataSource implements IAuthDataSource {
 
   /// Rotates a refresh token by invalidating the old one and creating a new one
   /// This maintains an audit trail and enhances security
+  @Propagates([DatabaseException])
   @override
-  Future<RefreshTokenDB> rotateRefreshToken(
-    RefreshToken oldToken,
-    int userId, {
+  Future<RefreshTokenDB> rotateRefreshToken({
+    required RefreshToken oldToken,
+    required int userId,
     String? ipAddress,
     String? userAgent,
   }) async {
@@ -149,7 +157,7 @@ final class AuthDataSource implements IAuthDataSource {
     final RefreshTokenDB oldTokenData = await getRefreshToken(oldToken);
 
     // Use transaction to ensure atomicity
-    return _db.runTx((connection) async {
+    return _ps.runTx((connection) async {
       // Mark old token as used (don't delete it)
       await connection.execute(
         Sql.named(
@@ -202,7 +210,7 @@ final class AuthDataSource implements IAuthDataSource {
     final DateTime revokedAt = DateTime.now().toUtc();
 
     @Throws([DatabaseException])
-    final Result result = await _db.execute(
+    final Result result = await _ps.execute(
       Sql.named('''
       UPDATE refresh_tokens
       SET 

@@ -6,9 +6,11 @@ import 'package:common/auth/tokens/refresh_jwtoken_request.dart';
 import 'package:common/auth/tokens/refresh_jwtoken_response.dart';
 
 abstract interface class IAuthRepository {
-  Future<RefreshJWTokenResponse> refreshJWToken(
-    RefreshJWTokenRequest refreshTokenRequest,
-  );
+  Future<RefreshJWTokenResponse> refreshJWToken({
+    required RefreshJWTokenRequest refreshTokenRequest,
+    required String? ipAddress,
+    required String? userAgent,
+  });
 
   Future<LoginResponse> login({
     required LoginRequest loginRequest,

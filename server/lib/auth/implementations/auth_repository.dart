@@ -19,7 +19,7 @@ import 'package:server/auth/implementations/auth_data_source.dart';
 import 'package:server/auth/jwtoken_helper.dart';
 import 'package:server/auth/models/refresh_token_db.dart';
 import 'package:server/auth/models/user_db.dart';
-import 'package:server/postgres/exceptions/database_exception.dart';
+import 'package:server/postgres/database_exception.dart';
 
 final class AuthRepository implements IAuthRepository {
   AuthRepository({
@@ -33,9 +33,11 @@ final class AuthRepository implements IAuthRepository {
   final Hasher _hasher;
 
   @override
-  Future<RefreshJWTokenResponse> refreshJWToken(
-    RefreshJWTokenRequest refreshTokenRequest,
-  ) async {
+  Future<RefreshJWTokenResponse> refreshJWToken({
+    required RefreshJWTokenRequest refreshTokenRequest,
+    required String? ipAddress,
+    required String? userAgent,
+  }) async {
     @Throws([DatabaseException])
     final RefreshTokenDB refreshTokenDB = await _authDataSource.getRefreshToken(
       refreshTokenRequest.refreshToken,
@@ -66,7 +68,8 @@ final class AuthRepository implements IAuthRepository {
     final DateTime nowUtc = DateTime.now().toUtc();
 
     if (refreshTokenDB.expiresAt.toUtc().isBefore(nowUtc)) {
-      await _authDataSource.deleteRefreshToken(
+      // Mark as expired instead of deleting
+      await _authDataSource.markRefreshTokenExpired(
         refreshTokenRequest.refreshToken,
       );
 
@@ -80,7 +83,12 @@ final class AuthRepository implements IAuthRepository {
 
     // Rotate the token
     final RefreshTokenDB newRefreshTokenDB = await _authDataSource
-        .rotateRefreshToken(refreshTokenRequest.refreshToken, userId);
+        .rotateRefreshToken(
+          oldToken: refreshTokenRequest.refreshToken,
+          userId: userId,
+          ipAddress: ipAddress,
+          userAgent: userAgent,
+        );
 
     // Create new JWT
     final JWToken jwToken = JWTokenHelper.createWith(userID: userId);

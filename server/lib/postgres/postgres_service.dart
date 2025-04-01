@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:common/annotations/throws.dart';
 import 'package:common/logger/logger.dart';
 import 'package:postgres/postgres.dart';
-import 'package:server/postgres/exceptions/database_exception.dart';
+import 'package:server/postgres/database_exception.dart';
+import 'package:server/postgres/i_postgres_service.dart';
 
-final class PostgresService {
+final class PostgresService implements IPostgresService {
   PostgresService._(this._conn);
 
   Connection _conn;
@@ -50,6 +51,7 @@ final class PostgresService {
     }
   }
 
+  @override
   @Throws([DatabaseException])
   Future<R> runTx<R>(
     Future<R> Function(TxSession sess) fn, {
@@ -69,6 +71,7 @@ final class PostgresService {
 
   /// Checks if the database connection is healthy
   /// Returns true if a simple query succeeds, false otherwise
+  @override
   Future<bool> isHealthy() async {
     try {
       final Result result = await _conn.execute('SELECT 1');
@@ -80,6 +83,7 @@ final class PostgresService {
     return false;
   }
 
+  @override
   @Throws([DatabaseException])
   Future<Result> execute(Sql query, {Map<String, dynamic>? parameters}) async {
     try {
@@ -94,6 +98,7 @@ final class PostgresService {
     }
   }
 
+  @override
   Future<T> executeAndMap<T>({
     required Sql query,
     required T Function(Map<String, dynamic>) mapper,

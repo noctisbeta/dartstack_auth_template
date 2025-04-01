@@ -13,7 +13,7 @@ import 'package:common/auth/tokens/refresh_jwtoken_response.dart';
 import 'package:common/exceptions/bad_map_shape_exception.dart';
 import 'package:server/auth/abstractions/i_auth_handler.dart';
 import 'package:server/auth/abstractions/i_auth_repository.dart';
-import 'package:server/postgres/exceptions/database_exception.dart';
+import 'package:server/postgres/database_exception.dart';
 import 'package:server/util/json_response.dart';
 import 'package:server/util/request_extension.dart';
 import 'package:shelf/shelf.dart';
@@ -33,8 +33,17 @@ final class AuthHandler implements IAuthHandler {
       @Throws([BadMapShapeException])
       final refreshTokenRequest = RefreshJWTokenRequest.validatedFromMap(json);
 
+      final (
+        ipAddr: String? ipAddr,
+        userAgent: String? userAgent,
+      ) = _getClientInformation(request);
+
       final RefreshJWTokenResponse refreshTokenResponse = await _authRepository
-          .refreshJWToken(refreshTokenRequest);
+          .refreshJWToken(
+            refreshTokenRequest: refreshTokenRequest,
+            userAgent: userAgent,
+            ipAddress: ipAddr,
+          );
 
       switch (refreshTokenResponse) {
         case RefreshJWTokenResponseSuccess():
